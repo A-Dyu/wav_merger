@@ -1,5 +1,5 @@
 #include "wav_file.h"
-wav_file::wav_file(const char *file_name, const char *mode): mode(mode) {
+wav_file::wav_file(const char* file_name, const char* mode): mode(mode) {
   file = std::fopen(file_name, mode);
   if (!file) {
     throw std::runtime_error("Error opening wav file");
@@ -9,9 +9,19 @@ wav_file::wav_file(const char *file_name, const char *mode): mode(mode) {
   }
 }
 
-wav_file::wav_file(wav_file &&other): file(other.file), mode(other.mode) {
+wav_file::wav_file(wav_file&& other): file(other.file), mode(other.mode) {
   memcpy(header, other.header, HEADER_SIZE);
   other.file = nullptr;
+}
+
+wav_file &wav_file::operator=(wav_file&& other) {
+  if (this != &other) {
+    if (file) {
+      std::fclose(file);
+    }
+    new(this) wav_file(std::move(other));
+  }
+  return *this;
 }
 
 wav_file::wav_file(const char* out_file_name, const char* mode, std::vector<wav_file> const& mono_files, double amp_multiplier): mode(mode) {
@@ -56,7 +66,7 @@ wav_file::~wav_file() {
 }
 
 uint32_t wav_file::get_data_size() const noexcept {
-    return header_cast(DATA_SIZE);
+  return header_cast(DATA_SIZE);
 }
 uint16_t wav_file::get_num_channels() const noexcept {
   return header_cast(NUM_CHANNELS);
@@ -88,7 +98,7 @@ void wav_file::set_data_size(uint32_t val) noexcept {
 }
 
 void wav_file::set_num_channels(uint16_t val) noexcept {
-    header_cast(NUM_CHANNELS) = val;
+  header_cast(NUM_CHANNELS) = val;
 }
 
 void wav_file::set_sample_rate(uint32_t val) noexcept {

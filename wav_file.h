@@ -14,6 +14,10 @@ struct wav_file {
 
   wav_file(wav_file&& other);
 
+  wav_file& operator=(wav_file const&) = delete;
+
+  wav_file& operator=(wav_file&& other);
+
   ~wav_file();
 
   uint32_t get_data_size() const noexcept;
