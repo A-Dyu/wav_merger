@@ -4,9 +4,14 @@ wav_file::wav_file(const char *file_name, const char *mode): mode(mode) {
   if (!file) {
     throw std::runtime_error("Error opening wav file");
   }
-  if (std::fread(&header, 1, HEADER_SIZE, file) < HEADER_SIZE) {
+  if (std::fread(header, 1, HEADER_SIZE, file) < HEADER_SIZE) {
     throw std::runtime_error("Error reading wav file header");
   }
+}
+
+wav_file::wav_file(wav_file &&other): file(other.file), mode(other.mode) {
+  memcpy(header, other.header, HEADER_SIZE);
+  other.file = nullptr;
 }
 
 wav_file::wav_file(const char* out_file_name, const char* mode, std::vector<wav_file> const& mono_files, double amp_multiplier): mode(mode) {
@@ -45,7 +50,9 @@ wav_file::wav_file(const char* out_file_name, const char* mode, std::vector<wav_
 }
 
 wav_file::~wav_file() {
-  std::fclose(file);
+  if (file) {
+    std::fclose(file);
+  }
 }
 
 uint32_t wav_file::get_data_size() const noexcept {

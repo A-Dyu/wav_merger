@@ -10,6 +10,10 @@ struct wav_file {
 
   wav_file(const char*, const char*, std::vector<wav_file> const&, double);
 
+  wav_file(wav_file const&) = delete;
+
+  wav_file(wav_file&& other);
+
   ~wav_file();
 
   uint32_t get_data_size() const noexcept;
