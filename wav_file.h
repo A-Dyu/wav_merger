@@ -5,14 +5,23 @@
 #include <string>
 #include <vector>
 
-struct wav_file {
+struct wav_file_header {
+  uint16_t n_channels;
+  uint32_t sample_rate;
+  uint32_t byte_rate;
+  uint16_t block_align;
+  uint16_t bits_per_sample;
+  uint32_t data_size;
+};
+
+struct wav_file : wav_file_header {
   wav_file(const char*, const char*);
 
   wav_file(const char*, const char*, std::vector<wav_file> const&, double);
 
   wav_file(wav_file const&) = delete;
 
-  wav_file(wav_file&& other);
+  wav_file(wav_file&& other) noexcept;
 
   wav_file& operator=(wav_file const&) = delete;
 
@@ -22,73 +31,68 @@ struct wav_file {
 
   uint32_t get_data_size() const noexcept;
 
-  void set_data_size(uint32_t) noexcept;
-
   uint16_t get_num_channels() const noexcept;
-
-  void set_num_channels(uint16_t) noexcept;
 
   uint32_t get_sample_rate() const noexcept;
 
-  void set_sample_rate(uint32_t) noexcept;
-
   uint32_t get_byte_rate() const noexcept;
-
-  void set_byte_rate(uint32_t) noexcept;
 
   uint32_t get_bits_per_sample() const noexcept;\
 
-  uint32_t get_chunk_size() const noexcept;
 
 private:
-  static constexpr size_t HEADER_SIZE = 44;
-  static constexpr uint32_t CHUNK_SIZE = 4;
-  static constexpr uint32_t SUBCHUNK_SIZE = 16;
-  static constexpr uint16_t NUM_CHANNELS = 22;
-  static constexpr uint32_t SAMPLE_RATE = 24;
-  static constexpr uint32_t BYTE_RATE = 28;
-  static constexpr uint16_t BITS_PER_SAMPLE = 34;
-  static constexpr uint32_t DATA_SIZE = 40;
-
-  template<typename IntT>
-  IntT& header_cast(IntT shift) noexcept {
-    return *reinterpret_cast<IntT*>(header + shift);
-  }
-
-  template<typename IntT>
-  IntT const& header_cast(IntT shift) const noexcept {
-    return *reinterpret_cast<const IntT*>(header + shift);
-  }
-
   template<typename IntT>
   void write_merged_data(std::vector<wav_file> const& mono_files, uint32_t max_data_size, double amp_multiplier) {
     size_t block_size = get_bits_per_sample() / 8;
     for (uint32_t i = 0; i < max_data_size; i++) {
-      for (auto const& mono_file : mono_files) {
-        IntT buf;
-        if (i < mono_file.get_data_size()) {
-          std::fread(&buf, 1, block_size, mono_file.file);
-        } else {
-          buf = 0;
+      size_t l_channels = 0, r_channels = 0;
+      int64_t l_val = 0, r_val = 0;
+      for (size_t j = 0; j < mono_files.size(); j++) {
+        if (mono_files[j].data_size > i * sizeof(IntT)) {
+          uint32_t deb = mono_files[j].data_size;
+          if (j < mono_files.size() / 2) {
+            l_val += mono_files[j].read_number<IntT>();
+            l_channels++;
+          } else {
+            r_val += mono_files[j].read_number<IntT>();
+            r_channels++;
+          }
         }
-        buf *= amp_multiplier;
-        std::fwrite(&buf, 1, block_size, file);
       }
+      l_val /= std::max(l_channels, static_cast<size_t>(1));
+      r_val /= std::max(r_channels, static_cast<size_t>(1));
+      l_val *= amp_multiplier;
+      r_val *= amp_multiplier;
+      write_number<IntT>(l_val);
+      write_number<IntT>(r_val);
     }
   }
 
-  u_int32_t get_subchunk_size() const noexcept;
-
-  void set_bits_per_sample(uint32_t) noexcept;
-
-  void set_chunk_size(uint32_t) noexcept;
-
   void write_header();
+
+  void write_chunk_id(const char*);
+
+  template<typename IntT>
+  void write_number(IntT number) {
+    std::fwrite(&number, 1, sizeof(number), file);
+  }
+
+  std::string read_chunk_header() const;
+
+  template<typename IntT>
+  IntT read_number() const {
+      char n_data[sizeof(IntT)];
+      read_n_bytes(n_data, sizeof(IntT));
+      return *reinterpret_cast<IntT*>(n_data);
+  }
+
+  void read_n_bytes(char* dst, size_t n) const;
+
+  void check_chunk_id(std::string const& id) const;
 
   bool is_writable() const noexcept;
 
   std::FILE* file;
-  char header[HEADER_SIZE];
   const char* mode;
 };
 
