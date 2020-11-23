@@ -43,22 +43,19 @@ struct wav_file : wav_file_header {
 private:
   template<typename IntT>
   void write_merged_data(std::vector<wav_file> const& mono_files, uint32_t max_data_size, double amp_multiplier) {
-    size_t block_size = get_bits_per_sample() / 8;
     for (uint32_t i = 0; i < max_data_size; i++) {
       size_t l_channels = 0, r_channels = 0;
       int64_t l_val = 0, r_val = 0;
-      for (size_t j = 0; j < mono_files.size(); j++) {
+      for (size_t j = 0; j < mono_files.size() / 2; j++)
         if (mono_files[j].data_size > i * sizeof(IntT)) {
-          uint32_t deb = mono_files[j].data_size;
-          if (j < mono_files.size() / 2) {
-            l_val += mono_files[j].read_number<IntT>();
-            l_channels++;
-          } else {
-            r_val += mono_files[j].read_number<IntT>();
-            r_channels++;
-          }
+          l_val += mono_files[j].read_number<IntT>();
+          l_channels++;
         }
-      }
+      for (size_t j = mono_files.size() / 2; j < mono_files.size(); j++)
+        if (mono_files[j].data_size > i * sizeof(IntT)) {
+          r_val += mono_files[j].read_number<IntT>();
+          r_channels++;
+        }
       l_val /= std::max(l_channels, static_cast<size_t>(1));
       r_val /= std::max(r_channels, static_cast<size_t>(1));
       l_val *= amp_multiplier;
