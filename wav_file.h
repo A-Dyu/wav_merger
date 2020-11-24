@@ -1,9 +1,11 @@
 #pragma once
-#include <iostream>
+#include <cassert>
 #include <cstdint>
 #include <cstdio>
+#include <iostream>
 #include <string>
 #include <vector>
+
 
 struct wav_file_header {
   uint16_t n_channels;
@@ -16,7 +18,7 @@ struct wav_file_header {
 };
 
 struct wav_file : wav_file_header {
-  wav_file() noexcept = default;
+  wav_file() noexcept;
 
   wav_file(const char*, const char*);
 
@@ -42,14 +44,14 @@ struct wav_file : wav_file_header {
 
   uint32_t get_byte_rate() const noexcept;
 
-  uint32_t get_bits_per_sample() const noexcept;\
+  uint32_t get_bits_per_sample() const noexcept;
 
   friend wav_file merge(const char*, const char*, std::vector<wav_file> const&, double);
 
 private:
   template<typename IntT>
   void write_merged_data(std::vector<wav_file> const& mono_files, uint32_t max_data_size, double amp_multiplier) {
-    for (uint32_t i = 0; i < max_data_size; i++) {
+    for (uint32_t i = 0; i < max_data_size / sizeof(IntT); i++) {
       IntT l_val = 0, r_val = 0;
       for (size_t j = 0; j < mono_files.size(); j++)
         if (mono_files[j].data_size > i * sizeof(IntT)) {

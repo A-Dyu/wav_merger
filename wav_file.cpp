@@ -1,4 +1,6 @@
 #include "wav_file.h"
+wav_file::wav_file() noexcept : file(nullptr), name(nullptr), mode(nullptr) {}
+
 wav_file::wav_file(const char* file_name, const char* mode) : wav_file() {
   load(file_name, mode);
 }
