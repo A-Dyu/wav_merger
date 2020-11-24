@@ -12,12 +12,13 @@ struct wav_file_header {
   uint16_t block_align;
   uint16_t bits_per_sample;
   uint32_t data_size;
+  uint32_t data_begin;
 };
 
 struct wav_file : wav_file_header {
-  wav_file(const char*, const char*);
+  wav_file() noexcept = default;
 
-  wav_file(const char*, const char*, std::vector<wav_file> const&, double);
+  wav_file(const char*, const char*);
 
   wav_file(wav_file const&) = delete;
 
@@ -25,9 +26,13 @@ struct wav_file : wav_file_header {
 
   wav_file& operator=(wav_file const&) = delete;
 
-  wav_file& operator=(wav_file&& other);
+  wav_file& operator=(wav_file&& other) noexcept;
 
   ~wav_file();
+
+  void load(const char*, const char*);
+
+  void save(const char*);
 
   uint32_t get_data_size() const noexcept;
 
@@ -39,25 +44,17 @@ struct wav_file : wav_file_header {
 
   uint32_t get_bits_per_sample() const noexcept;\
 
+  friend wav_file merge(const char*, const char*, std::vector<wav_file> const&, double);
 
 private:
   template<typename IntT>
   void write_merged_data(std::vector<wav_file> const& mono_files, uint32_t max_data_size, double amp_multiplier) {
     for (uint32_t i = 0; i < max_data_size; i++) {
-      size_t l_channels = 0, r_channels = 0;
-      int64_t l_val = 0, r_val = 0;
-      for (size_t j = 0; j < mono_files.size() / 2; j++)
+      IntT l_val = 0, r_val = 0;
+      for (size_t j = 0; j < mono_files.size(); j++)
         if (mono_files[j].data_size > i * sizeof(IntT)) {
-          l_val += mono_files[j].read_number<IntT>();
-          l_channels++;
+          (j % 2 == 0 ? l_val : r_val) += mono_files[j].read_number<IntT>();
         }
-      for (size_t j = mono_files.size() / 2; j < mono_files.size(); j++)
-        if (mono_files[j].data_size > i * sizeof(IntT)) {
-          r_val += mono_files[j].read_number<IntT>();
-          r_channels++;
-        }
-      l_val /= std::max(l_channels, static_cast<size_t>(1));
-      r_val /= std::max(r_channels, static_cast<size_t>(1));
       l_val *= amp_multiplier;
       r_val *= amp_multiplier;
       write_number<IntT>(l_val);
@@ -89,10 +86,14 @@ private:
 
   bool is_writable() const noexcept;
 
+  void free();
+
   std::FILE* file;
+  const char* name;
   const char* mode;
 };
 
 bool are_mergeable(wav_file const&, wav_file const&);
+
 
 
