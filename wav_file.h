@@ -36,6 +36,8 @@ struct wav_file : wav_file_header {
 
   void save(const char*);
 
+  void close();
+
   uint32_t get_data_size() const noexcept;
 
   uint16_t get_num_channels() const noexcept;

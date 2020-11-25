@@ -70,6 +70,12 @@ void wav_file::save(const char* new_file_name) {
   std::remove(old_name);
 }
 
+void wav_file::close() {
+  free();
+  name = mode = nullptr;
+  file = nullptr;
+}
+
 uint32_t wav_file::get_data_size() const noexcept {
   return data_size;
 }
