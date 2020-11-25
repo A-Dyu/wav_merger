@@ -46,7 +46,7 @@ struct wav_file : wav_file_header {
 
   uint32_t get_bits_per_sample() const noexcept;
 
-  friend wav_file merge(const char*, const char*, std::vector<wav_file> const&, double);
+  friend wav_file merge(const char*, std::vector<wav_file> const&, double);
 
 private:
   template<typename IntT>

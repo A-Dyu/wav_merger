@@ -53,7 +53,7 @@ void wav_file::load(const char* file_name, const char* file_mode) {
   data_begin = chunk_size - data_size + 8;
 }
 
-void wav_file::save(const char * new_file_name) {
+void wav_file::save(const char* new_file_name) {
   FILE* old_file = file;
   const char* old_name = name;
   std::fseek(old_file, data_begin, SEEK_SET);
@@ -134,20 +134,18 @@ void wav_file::free() {
   }
 }
 
-wav_file merge(const char* out_file_name, const char* mode, std::vector<wav_file> const& mono_files, double amp_multiplier) {
+wav_file merge(const char* out_file_name, std::vector<wav_file> const& mono_files, double amp_multiplier) {
   wav_file out_file;
   assert(!mono_files.empty());
-  if (mode[0] != 'w') {
-    throw std::runtime_error("Can't make a file with such mode");
-  }
-  out_file.file = std::fopen(out_file_name, mode);
+  out_file.file = std::fopen(out_file_name, "w+");
   if (!out_file.file) {
     throw std::runtime_error("Error while creating output file");
   }
   out_file.name = out_file_name;
-  out_file.mode = mode;
+  out_file.mode = "w+";
   uint32_t max_data_size = 0;
   for (size_t i = 0; i < mono_files.size(); i++) {
+    std::fseek(mono_files[i].file, mono_files[i].data_begin, SEEK_SET);
     if (mono_files[i].get_num_channels() != 1) {
       throw std::runtime_error("Can't merge stereo files");
     }
